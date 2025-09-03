@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Навигатор абитуриента НВК</title>
+
+  <!-- model-viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    :root{
+      --glass: rgba(12,28,64,0.55);
+      --glass-strong: rgba(12,28,64,0.75);
+      --accent1: #7fd4ff;
+      --accent2: #2d7dff;
+      --accent3: #00c6ff;
+      --white: #fff;
+      --shadow: 0 10px 40px rgba(0,160,255,0.45), inset 0 0 50px rgba(120,190,255,0.15);
+      --radius: 16px;
+    }
+
+    /* Background */
+    body{
+      margin:0;
+      font-family: "Inter", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+      color: var(--white);
+      background: url("https://i.postimg.cc/KYXPD2fp/photo-2025-09-03-14-55-54.jpg") center/cover fixed no-repeat;
+      min-height:100dvh;
+    }
+
+    /* Overlay to boost contrast */
+    .overlay{
+      position: fixed;
+      inset:0;
+      background: linear-gradient(180deg, rgba(6,16,40,0.6), rgba(6,16,40,0.35));
+      pointer-events:none;
+      z-index:-1;
+    }
+
+    /* Header */
+    header{
+      padding: 22px 20px;
+      text-align:center;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(135deg, rgba(8,20,48,0.8), rgba(8,20,48,0.55));
+      box-shadow: var(--shadow);
+      position: sticky;
+      top:0;
+      z-index:100;
+    }
+    header .title{
+      font-weight: 800;
+      letter-spacing: .5px;
+      font-size: clamp(24px, 3.2vw, 40px);
+      background: linear-gradient(90deg, #bfe9ff, #8fd3fe, #2d7dff 70%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 20px rgba(130,190,255,0.25);
+    }
+
+    .container{
+      max-width: 1120px;
+      margin: 24px auto 60px;
+      padding: 0 16px;
+    }
+
+    /* Glass card */
+    .card{
+      background: var(--glass);
+      border: 1px solid rgba(160,220,255,0.25);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    /* Tab Nav (main) */
+    .tabs{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(8,20,48,0.6), rgba(8,20,48,0.35));
+      border-bottom: 1px solid rgba(160,220,255,0.25);
+    }
+    .tab-btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding: 12px 16px;
+      border-radius: 12px;
+      color:#cfeaff;
+      background: linear-gradient(135deg, rgba(0,110,255,0.25), rgba(0,200,255,0.25));
+      box-shadow: 0 6px 15px rgba(0,120,255,0.25) inset,
+                  0 8px 20px rgba(0,100,255,0.25);
+      display:flex;
+      align-items:center;
+      gap:10px;
+      transition: transform .15s ease, background .25s ease, box-shadow .25s ease;
+      font-weight:600;
+    }
+    .tab-btn:hover{ transform: translateY(-2px); }
+    .tab-btn.active{
+      color:white;
+      background: linear-gradient(135deg, #2d7dff, #00c6ff);
+      box-shadow: 0 6px 18px rgba(0,120,255,0.4);
+    }
+    .tab-icon{
+      width: 20px; height: 20px;
+      display:inline-block;
+      filter: drop-shadow(0 0 6px rgba(150,210,255,0.55));
+    }
+
+    .tab-panel{ display:none; padding: 18px 18px 26px; }
+    .tab-panel.active{ display:block; }
+
+    /* Subtabs (chips) */
+    .chips{
+      display:flex; flex-wrap:wrap; gap:10px; margin: 8px 0 16px;
+    }
+    .chip{
+      border:none; cursor:pointer; padding: 10px 12px; border-radius: 999px;
+      color:#e9f6ff; background: rgba(0,150,255,0.25);
+      border:1px solid rgba(120,200,255,0.35);
+      transition: .2s ease;
+      font-weight:600; font-size:14px;
+    }
+    .chip:hover{ background: rgba(0,180,255,0.35); transform: translateY(-1px); }
+    .chip.active{ background: linear-gradient(135deg, #2d7dff, #00c6ff); color:white; }
+
+    .row{ display:grid; grid-template-columns: 140px 1fr; gap:16px; align-items:start; }
+    .row img{
+      width: 140px; height: 100px; object-fit: cover; border-radius: 12px;
+      border:1px solid rgba(150,210,255,0.4);
+      box-shadow: 0 6px 20px rgba(0,140,255,0.25);
+      background: #0b1e44;
+    }
+    .info{
+      background: var(--glass-strong);
+      border: 1px solid rgba(150,210,255,0.25);
+      border-radius: 12px;
+      padding: 12px 14px;
+      line-height: 1.5;
+    }
+
+    .yandex-link{
+      display:inline-flex; align-items:center; gap:8px;
+      margin: 6px 0 14px;
+      padding: 10px 14px; border-radius: 12px; font-weight:700;
+      background: linear-gradient(135deg, #2d7dff, #00c6ff);
+      color:white; text-decoration:none;
+      box-shadow: 0 8px 24px rgba(0,140,255,0.35);
+    }
+
+    /* 3D model */
+    .mv-wrap{
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(160,220,255,0.3);
+      box-shadow: 0 0 28px rgba(0,160,255,0.35);
+      background: radial-gradient(1200px 600px at 10% 10%, rgba(0,150,255,0.12), transparent 60%);
+    }
+    model-viewer{
+      width:100%; height: 62vh; min-height: 420px; background: transparent;
+    }
+    .hotspot-btn{
+      background: radial-gradient(circle at 40% 40%, #8ddcff, #2d7dff 70%);
+      border: 2px solid white; border-radius: 50%;
+      width: 20px; height: 20px; cursor: pointer;
+      box-shadow: 0 0 16px rgba(120,200,255,0.7);
+    }
+    .mv-popover{
+      position: absolute;
+      transform: translate(-50%, calc(-100% - 16px));
+      min-width: 180px; max-width: 260px;
+      padding: 10px 12px; border-radius: 12px;
+      background: rgba(8,22,56,0.92);
+      border: 1px solid rgba(140,200,255,0.35);
+      box-shadow: 0 12px 28px rgba(0,120,255,0.35);
+      display:none; z-index:10;
+    }
+    .mv-popover h4{ margin: 0 0 6px; font-size: 15px; color: #bfe6ff; }
+    .mv-popover p{ margin: 0; font-size: 13px; color: #e8f6ff; opacity: 0.95; }
+    .mv-popover .arrow{
+      position:absolute; left:50%; transform:translateX(-50%);
+      bottom:-8px; width:0; height:0; border-left:8px solid transparent;
+      border-right:8px solid transparent; border-top:8px solid rgba(8,22,56,0.92);
+      filter: drop-shadow(0 2px 2px rgba(0,0,0,0.3));
+    }
+
+    /* Links grid */
+    .links-grid{
+      display:grid; gap:12px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+    .link-card{
+      background: var(--glass-strong);
+      border: 1px solid rgba(160,220,255,0.25);
+      padding: 14px; border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,120,255,0.25);
+    }
+    .link-card a{
+      color:#dff2ff; text-decoration:none; font-weight:700;
+    }
+    .link-card a:hover{ text-decoration:underline; }
+
+    /* Gallery */
+    .gallery{
+      display:grid; gap:10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .gallery a{
+      display:block; background:#0b1e44; border-radius:12px; overflow:hidden;
+      border:1px solid rgba(150,210,255,0.35);
+      box-shadow: 0 8px 22px rgba(0,140,255,0.25);
+    }
+    .gallery img{
+      width:100%; height:180px; object-fit:cover; display:block;
+    }
+
+    .footer-actions{
+      display:flex; gap:10px; flex-wrap:wrap; margin-top: 12px;
+    }
+    .btn{
+      appearance:none; border:none; cursor:pointer; text-decoration:none;
+      padding: 10px 14px; border-radius: 12px; font-weight:700; color:white;
+      background: linear-gradient(135deg, #2d7dff, #00c6ff);
+      box-shadow: 0 10px 26px rgba(0,140,255,0.35);
+      display:inline-flex; align-items:center; gap:8px;
+    }
+
+    /* Small */
+    @media (max-width:700px){
+      .row{ grid-template-columns: 1fr; }
+      .row img{ width:100%; height: 160px; }
+      model-viewer{ height: 56vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay"></div>
+  <header>
+    <div class="title">Навигатор абитуриента НВК</div>
+  </header>
+
+  <main class="container card">
+    <!-- Main Tabs -->
+    <nav class="tabs" id="main-tabs">
+      <button class="tab-btn active" data-tab="transport">
+        <svg class="tab-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#bfe9ff"/><stop offset="1" stop-color="#2d7dff"/></linearGradient></defs>
+          <path fill="url(#g1)" d="M5 16c0 1.1.9 2 2 2h1l-1.5 1.5a1 1 0 1 0 1.4 1.4L10 19h4l2.1 1.9a1 1 0 1 0 1.3-1.5L16 18h1a2 2 0 0 0 2-2V6a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v10Zm2-5h10v3a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-3Zm0-5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3H7V6Z"/>
+        </svg>
+        Транспорт
+      </button>
+      <button class="tab-btn" data-tab="food">Закупки/еда (услуги)</button>
+      <button class="tab-btn" data-tab="model3d">3D Модель</button>
+      <button class="tab-btn" data-tab="links">Полезные ссылки</button>
+      <button class="tab-btn" data-tab="dorm">Фото общежития</button>
+    </nav>
+
+    <!-- Panels -->
+    <section class="tab-panel active" id="transport">
+      <a class="yandex-link" href="https://yandex.ru/maps" target="_blank" rel="noopener noreferrer">Открыть Яндекс Карты</a>
+
+      <div class="chips" id="bus-chips">
+        <button class="chip active" data-bus="b56">56</button>
+        <button class="chip" data-bus="b44">44-(25,36,77)</button>
+        <button class="chip" data-bus="b66">66-77</button>
+        <button class="chip" data-bus="b65">65-25,36/60,89</button>
+      </div>
+
+      <!-- Bus contents -->
+      <div class="bus-content">
+        <div class="row bus-panel" id="b56" style="display:block;">
+          <img src="https://i.postimg.cc/fR8QHYGD/2025-09-03-233939.png" alt="Маршрут 56" />
+          <div class="info">
+            <div><b>Начинает ходить:</b> 05:52</div>
+            <div><b>Периодичность:</b> каждые 20 минут</div>
+            <div><b>Время поездки:</b> ~38 мин (19 остановок)</div>
+            <div><b>Конечная остановка:</b> Улица Малышева</div>
+            <div><b>Пешком:</b> 15 мин</div>
+          </div>
+        </div>
+
+        <div class="row bus-panel" id="b44" style="display:none;">
+          <img src="https://i.postimg.cc/3R41vD5K/2025-09-04-002320.png" alt="Маршруты 44, 25, 36, 77" />
+          <div class="info">
+            <div><b>44 от кампуса УРФУ:</b></div>
+            <div>Время поездки: ~12 мин (5 остановок)</div>
+            <div>Конечная остановка: Улица Академика Шварца</div>
+            <br>
+            <div><b>36, 25 троллейбус, 77 автобус:</b></div>
+            <div>Время поездки: ~22 мин</div>
+            <div><b>Пешком:</b> 2 мин</div>
+          </div>
+        </div>
+
+        <div class="row bus-panel" id="b66" style="display:none;">
+          <img src="https://i.postimg.cc/dVg3HPPq/2025-09-03-235758.png" alt="Маршруты 66 и 77" />
+          <div class="info">
+            <div><b>66:</b></div>
+            <div>Время поездки: ~19 мин (7 остановок)</div>
+            <div>Конечная остановка: Улица Академика Шварца</div>
+            <br>
+            <div><b>77:</b></div>
+            <div>Время поездки: ~13 мин (22 остановок)</div>
+            <div>Конечная остановка: Профессорская</div>
+          </div>
+        </div>
+
+        <div class="row bus-panel" id="b65" style="display:none;">
+          <img src="https://i.postimg.cc/yYDhGKg5/2025-09-04-001201.png" alt="Маршруты 65, 25, 36, 60, 89" />
+          <div class="info">
+            <div><b>65 от кампуса УРФУ:</b></div>
+            <div>Время поездки: ~34 мин (21 остановок)</div>
+            <div>Конечная остановка: Библиотека имени Белинского</div>
+            <br>
+            <div><b>Троллейбусы 25,36:</b></div>
+            <div>Время поездки: ~10 мин (4 остановок)</div>
+            <div>Конечная остановка: Профессорская</div>
+            <br>
+            <div><b>ИЛИ 60,89:</b></div>
+            <div>Время поездки: ~15 мин (8 остановок)</div>
+            <div>Конечная остановка: УРФУ</div>
+            <div><b>Пешком:</b> 5 мин</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="food">
+      <div class="chips" id="shop-chips">
+        <button class="chip active" data-shop="wb">Wildberries</button>
+        <button class="chip" data-shop="ozon">Ozon</button>
+        <button class="chip" data-shop="life">Жизньмарт</button>
+        <button class="chip" data-shop="china">Китайский магазин-закусочная</button>
+        <button class="chip" data-shop="monetka">Монетка</button>
+        <button class="chip" data-shop="copy">Копицентр</button>
+      </div>
+
+      <div class="row shop-panel" id="wb" style="display:block;">
+        <img src="https://i.postimg.cc/yNLsmVX0/2025-09-03-170257.png" alt="Wildberries" />
+        <div class="info">
+          <div><b>Улица:</b> Новороссийский бульвар 7</div>
+          <div><b>Время пешком:</b> ~16 мин</div>
+        </div>
+      </div>
+
+      <div class="row shop-panel" id="ozon" style="display:none;">
+        <img src="https://i.postimg.cc/QxKCjWgw/2025-09-03-170153.png" alt="Ozon" />
+        <div class="info">
+          <div><b>Улица:</b> Новороссийский бульвар 7/5</div>
+          <div><b>Время пешком:</b> ~16 мин</div>
+        </div>
+      </div>
+
+      <div class="row shop-panel" id="life" style="display:none;">
+        <img src="https://i.postimg.cc/13P8M36d/2025-09-03-170523.png" alt="Жизньмарт" />
+        <div class="info">
+          <div><b>Улица:</b> Универсиады 7, 1 этаж</div>
+        </div>
+      </div>
+
+      <div class="row shop-panel" id="china" style="display:none;">
+        <img src="https://i.postimg.cc/L63nhg0s/2025-09-03-184958.png" alt="Китайский магазин-закусочная" />
+        <div class="info">
+          <div>Китайский магазин-закусочная рядом с кампусом.</div>
+        </div>
+      </div>
+
+      <div class="row shop-panel" id="monetka" style="display:none;">
+        <img src="https://i.postimg.cc/WznBv8Wg/2025-09-03-171611.png" alt="Монетка" />
+        <div class="info">
+          <div><b>Улица:</b> Варшавская 26</div>
+          <div><b>Время пешком:</b> ~34 мин</div>
+        </div>
+      </div>
+
+      <div class="row shop-panel" id="copy" style="display:none;">
+        <img src="https://i.postimg.cc/jd2g2RCG/2025-09-03-171831.png" alt="Копицентр" />
+        <div class="info">
+          <div><b>Улица:</b> Улица 100-летия Уральского университета, 6</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="model3d">
+      <h2 style="margin:6px 6px 14px; color: var(--accent1);">✨ Новый кампус — скоро открытие!</h2>
+      <p style="margin:0 6px 14px;">Современный учебный корпус с умными аудиториями, уютными кафе и продуманными пространствами для встреч и проектов. Исследуй карту корпуса в 3D — нажимай на метки!</p>
+
+      <div class="mv-wrap" id="mv-wrap">
+        <!-- ВАЖНО: файл модели должен лежать в репозитории по пути /models/campus_urfu.glb -->
+        <model-viewer id="mv" src="models/campus_urfu.glb" alt="3D модель кампуса"
+          camera-controls auto-rotate
+          touch-action="pan-y"
+          shadow-intensity="1" exposure="1">
+          <!-- Хотспоты (примерные координаты; подстрой под свою модель) -->
+          <button class="hotspot-btn" slot="hotspot-1"
+                  data-position="0 0.6 0.8" data-normal="0 1 0"
+                  data-title="Женский туалет" data-text="Этаж 1, секция А"></button>
+
+          <button class="hotspot-btn" slot="hotspot-2"
+                  data-position="1.2 0.8 -0.4" data-normal="0 1 0"
+                  data-title="Аудитория 201" data-text="Лекции и практики по математике"></button>
+
+          <button class="hotspot-btn" slot="hotspot-3"
+                  data-position="-0.9 0.55 0.2" data-normal="0 1 0"
+                  data-title="Столовая" data-text="Горячее, кофе, выпечка"></button>
+
+          <button class="hotspot-btn" slot="hotspot-4"
+                  data-position="0.6 0.4 -1.1" data-normal="0 1 0"
+                  data-title="Кулер" data-text="Питьевая вода — возле лифтов"></button>
+
+          <button class="hotspot-btn" slot="hotspot-5"
+                  data-position="-0.4 0.35 -0.9" data-normal="0 1 0"
+                  data-title="Мусорка" data-text="Раздельный сбор — пластик, бумага"></button>
+        </model-viewer>
+
+        <!-- Поповер -->
+        <div class="mv-popover" id="mv-popover">
+          <h4 id="pop-title"></h4>
+          <p id="pop-text"></p>
+          <div class="arrow"></div>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <a class="btn" href="models/campus_urfu.glb" download>Скачать модель .glb</a>
+        <button class="btn" id="resetCamera">Сбросить камеру</button>
+      </div>
+
+      <p style="margin-top:10px; opacity:.85; font-size:13px;">
+        На GitHub Pages <b>нельзя</b> подключать модель напрямую с Google Drive (CORS). Положи файл в репозиторий: <code>/models/campus_urfu.glb</code>.
+      </p>
+    </section>
+
+    <section class="tab-panel" id="links">
+      <div class="links-grid">
+        <div class="link-card">
+          <a href="https://singularity-app.ru/blog/spisok-veshchey-v-obshchezhitie/" target="_blank" rel="noopener">Что брать с собой в общежитие</a>
+        </div>
+        <div class="link-card">
+          <a href="https://www.gastronom.ru/text/chto-prigotovit-golodnomu-studentu-vkusno-i-nedorogo-1017005?ysclid=mf41r156u0870301994" target="_blank" rel="noopener">Общажные рецепты</a>
+        </div>
+        <div class="link-card">
+          <a href="https://mel.fm/blog/stanisaw-samburskiy/38452-5-strakhov-perвокурсников-и-как-с-ними-справиться?ysclid=mf41t2g4ty946305803" target="_blank" rel="noopener">Страхи первокурсников</a>
+        </div>
+        <div class="link-card">
+          <a href="https://life.akbars.ru/personal-finance/ekonomim/finansovaya-gramotnost-dlya-studentov-kak-podgotovit-rebenka-k-samostoyatelnoy-zhizni/?ysclid=mf41vslxiy885955030" target="_blank" rel="noopener">Финансовая грамотность для студентов</a>
+        </div>
+        <div class="link-card">
+          <a href="https://dzen.ru/a/aJC1zVGUOW9CImrE?ysclid=mf41z4sv5y332875416" target="_blank" rel="noopener">Чем заняться первокурснику</a>
+        </div>
+      </div>
+
+      <div class="footer-actions">
+        <a class="btn" href="https://raw.githubusercontent.com/Elkh777/off/main/%D0%9D%D0%B0%D0%B2%D0%B8%D0%B3%D0%B0%D1%82%D0%BE%D1%80%D0%A3%D0%A0%D0%A4%D0%A3.pdf" target="_blank" rel="noopener">Оффлайн версия (PDF)</a>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="dorm">
+      <div class="gallery">
+        <a href="https://leonardo.osnova.io/6545f03c-e66f-5605-92b1-e69f2c3d26d1" target="_blank" rel="noopener">
+          <img src="https://leonardo.osnova.io/6545f03c-e66f-5605-92b1-e69f2c3d26d1" alt="Общежитие 1">
+        </a>
+        <a href="https://leonardo.osnova.io/6545f03c-e66f-5605-92b1-e69f2c3d26d1" target="_blank" rel="noopener">
+          <img src="https://leonardo.osnova.io/6545f03c-e66f-5605-92b1-e69f2c3d26d1" alt="Общежитие 2">
+        </a>
+        <a href="https://leonardo.osnova.io/ab01107c-9ad4-55d0-821a-38dccc20c3f1" target="_blank" rel="noopener">
+          <img src="https://leonardo.osnova.io/ab01107c-9ad4-55d0-821a-38dccc20c3f1" alt="Комната 1">
+        </a>
+        <a href="https://leonardo.osnova.io/ced75050-b640-577f-94ef-22022c7f531f" target="_blank" rel="noopener">
+          <img src="https://leonardo.osnova.io/ced75050-b640-577f-94ef-22022c7f531f" alt="Комната 2">
+        </a>
+        <a href="https://leonardo.osnova.io/613f7205-7fa0-523e-80f4-cc929422841c" target="_blank" rel="noopener">
+          <img src="https://leonardo.osnova.io/613f7205-7fa0-523e-80f4-cc929422841c" alt="Комната 3">
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // ----- Main tabs
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    tabButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabButtons.forEach(b => b.classList.toggle('active', b===btn));
+        tabPanels.forEach(p => p.classList.toggle('active', p.id === btn.dataset.tab));
+      });
+    });
+
+    // ----- Bus chips
+    const busChips = document.querySelectorAll('#bus-chips .chip');
+    const busPanels = document.querySelectorAll('.bus-panel');
+    busChips.forEach(ch => {
+      ch.addEventListener('click', () => {
+        busChips.forEach(c => c.classList.toggle('active', c===ch));
+        busPanels.forEach(p => p.style.display = (p.id === ch.dataset.bus) ? 'grid' : 'none');
+      });
+    });
+
+    // ----- Shop chips
+    const shopChips = document.querySelectorAll('#shop-chips .chip');
+    const shopPanels = document.querySelectorAll('.shop-panel');
+    shopChips.forEach(ch => {
+      ch.addEventListener('click', () => {
+        shopChips.forEach(c => c.classList.toggle('active', c===ch));
+        shopPanels.forEach(p => p.style.display = (p.id === ch.dataset.shop) ? 'grid' : 'none');
+      });
+    });
+
+    // ----- 3D Model: popover near clicked hotspot
+    const mv = document.getElementById('mv');
+    const pop = document.getElementById('mv-popover');
+    const popTitle = document.getElementById('pop-title');
+    const popText = document.getElementById('pop-text');
+    const wrap = document.getElementById('mv-wrap');
+
+    function placePopoverFor(el){
+      const rectWrap = wrap.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
+      const cx = rect.left + rect.width/2 - rectWrap.left;
+      const cy = rect.top + rect.height/2 - rectWrap.top;
+      pop.style.left = cx + 'px';
+      pop.style.top = cy + 'px';
+      pop.style.display = 'block';
+    }
+
+    wrap.addEventListener('click', (e) => {
+      const btn = e.target.closest('.hotspot-btn');
+      if(!btn) return;
+      popTitle.textContent = btn.dataset.title || 'Метка';
+      popText.textContent = btn.dataset.text || '';
+      placePopoverFor(btn);
+    });
+
+    // Hide popover on outside click
+    document.addEventListener('click', (e) => {
+      if(!wrap.contains(e.target) || e.target.classList.contains('hotspot-btn') === false){
+        if(!e.target.closest('.mv-popover')) pop.style.display = 'none';
+      }
+    });
+
+    // Reposition popover on resize: hide to avoid wrong placement
+    window.addEventListener('resize', ()=> pop.style.display='none');
+
+    // Reset camera
+    document.getElementById('resetCamera').addEventListener('click', () => {
+      mv.resetTurntableRotation && mv.resetTurntableRotation();
+      mv.cameraOrbit = '0deg 75deg 105%';
+      mv.cameraTarget = 'auto auto auto';
+    });
+  </script>
+</body>
+</html>
